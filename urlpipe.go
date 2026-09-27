@@ -36,7 +36,7 @@ import (
 )
 
 // Version is the version of this library.
-const Version = "0.1.0"
+const Version = "0.2.0"
 
 // DefaultBaseURL is where the URLpipe API lives.
 const DefaultBaseURL = "https://urlpipe.dev"
@@ -73,6 +73,7 @@ type Client struct {
 	timeout     time.Duration
 	maxRetries  int
 	waitTimeout time.Duration
+	userAgent   string
 
 	// Tunables kept unexported so tests can run the retry and polling paths
 	// without real sleeps.
@@ -132,6 +133,21 @@ func WithWaitTimeout(d time.Duration) Option {
 	return func(c *Client) { c.waitTimeout = d }
 }
 
+// WithUserAgent names the program making the requests, such as
+// "my-app/1.2". It goes in front of the client's own product token, so the
+// User-Agent reads "my-app/1.2 urlpipe-go/<version>". An empty string keeps
+// the default, "urlpipe-go/<version>".
+func WithUserAgent(product string) Option {
+	return func(c *Client) {
+		product = strings.TrimSpace(product)
+		if product == "" {
+			c.userAgent = userAgent
+			return
+		}
+		c.userAgent = product + " " + userAgent
+	}
+}
+
 // NewClient builds a client. It returns [ErrMissingAPIKey] when no API key
 // was given with [WithAPIKey] and URLPIPE_API_KEY is empty.
 func NewClient(opts ...Option) (*Client, error) {
@@ -141,6 +157,7 @@ func NewClient(opts ...Option) (*Client, error) {
 		timeout:      DefaultTimeout,
 		maxRetries:   DefaultMaxRetries,
 		waitTimeout:  DefaultWaitTimeout,
+		userAgent:    userAgent,
 		pollInterval: DefaultPollInterval,
 		backoffBase:  time.Second,
 	}

@@ -222,7 +222,7 @@ func TestOperations(t *testing.T) {
 			if got := req.Header.Get("Authorization"); got != "Bearer test-key" {
 				t.Errorf("Authorization = %q", got)
 			}
-			if got := req.Header.Get("User-Agent"); got != "urlpipe-go/0.1.0" {
+			if got := req.Header.Get("User-Agent"); got != "urlpipe-go/"+Version {
 				t.Errorf("User-Agent = %q", got)
 			}
 			if got := req.Header.Get("Content-Type"); got != "application/json" {
@@ -749,5 +749,35 @@ func TestScrapeKeepsTheOperationOrder(t *testing.T) {
 	}
 	if want := []Operation{OperationScreenshot, OperationMarkdown, OperationMeta}; !reflect.DeepEqual(r.Data.Order, want) {
 		t.Errorf("order = %v, want %v", r.Data.Order, want)
+	}
+}
+
+func TestWithUserAgentNamesTheCallingProgram(t *testing.T) {
+	cases := []struct {
+		name    string
+		product string
+		want    string
+	}{
+		{"a product goes in front of the client's own token", "my-app/1.2", "my-app/1.2 urlpipe-go/" + Version},
+		{"an empty product keeps the default", "", "urlpipe-go/" + Version},
+		{"surrounding spaces are dropped", "  my-app/1.2 ", "my-app/1.2 urlpipe-go/" + Version},
+	}
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			s, _ := newStub(t, text(200, "# Example"))
+			c := testClient(t, s.srv.URL, WithUserAgent(tc.product))
+			if _, err := c.Markdown(ctx, "https://example.com", nil); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := c.Result(ctx, "tok_123", OperationMarkdown); err != nil {
+				t.Fatal(err)
+			}
+			for _, req := range s.requests() {
+				if got := req.Header.Get("User-Agent"); got != tc.want {
+					t.Errorf("%s %s: User-Agent = %q, want %q", req.Method, req.Path, got, tc.want)
+				}
+			}
+		})
 	}
 }

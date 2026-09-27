@@ -63,7 +63,7 @@ func (c *Client) sendOnce(ctx context.Context, method, path string, body []byte,
 		return nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+c.apiKey)
-	req.Header.Set("User-Agent", userAgent)
+	req.Header.Set("User-Agent", c.userAgent)
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}

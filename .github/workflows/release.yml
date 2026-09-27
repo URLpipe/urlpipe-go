@@ -1,8 +1,10 @@
 name: Release
 
-# Go modules have no registry to publish to: the pushed tag is the release,
-# and pkg.go.dev indexes it on its own. This workflow tests the tag and then
-# creates the GitHub Release for it.
+# The pushed tag is the library's release: Go modules have no registry, and
+# pkg.go.dev indexes the tag on its own. This workflow tests the tag, then
+# GoReleaser builds the urlpipe CLI for macOS, Linux and Windows, creates the
+# GitHub Release with the archives, and updates the Homebrew tap and the Scoop
+# bucket (see .goreleaser.yaml).
 on:
   push:
     tags: ["v*"]
@@ -30,9 +32,19 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - name: Create the GitHub Release
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27"
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
         env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes --verify-tag
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_DEPLOY_KEY: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
+          SCOOP_BUCKET_DEPLOY_KEY: ${{ secrets.SCOOP_BUCKET_DEPLOY_KEY }}
       - name: Ask pkg.go.dev to index the tag
         run: curl -fsS "https://proxy.golang.org/github.com/!u!r!lpipe/urlpipe-go/@v/${GITHUB_REF_NAME}.info" || true

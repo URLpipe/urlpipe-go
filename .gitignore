@@ -12,3 +12,4 @@ coverage.*
 .vscode/
 *.swp
 .DS_Store
+dist/

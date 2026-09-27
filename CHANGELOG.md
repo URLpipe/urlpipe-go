@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0 - 2026-09-27
+
+- `urlpipe`, a command-line tool in `cmd/urlpipe`: every operation as a command (`markdown`, `html`, `summarize`, `screenshot`, `meta`, `keywords`, `console`, `lighthouse`, `scrape`, `result`), `login` to save the API key, and exit codes for CI (`console --fail-on-errors`, `lighthouse --min-score`). Released as binaries for macOS, Linux and Windows, in the Homebrew tap `urlpipe/tap` and the Scoop bucket `URLpipe/scoop-bucket`.
+- `WithUserAgent` names the program making the requests; the User-Agent then reads `<product> urlpipe-go/<version>`.
+
 ## 0.1.0 - 2026-09-25
 
 The first release.

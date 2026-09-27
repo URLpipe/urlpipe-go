@@ -2,7 +2,7 @@
 
 Turn any URL into clean data from Go: Markdown, rendered HTML, a full-page screenshot, metadata, a summary, keywords, console errors or a Lighthouse audit, each page rendered in real Chrome.
 
-This is the official Go client for [URLpipe](https://urlpipe.dev). It uses the standard library only.
+This is the official Go client for [URLpipe](https://urlpipe.dev). It uses the standard library only, and the repository also ships `urlpipe`, a [command-line tool](#command-line-tool) built on it.
 
 ## Install
 
@@ -255,6 +255,57 @@ Any other answer, such as a 403 other than `email_unverified` or a 429 with an u
 Connection errors, 500/502/503 and `concurrency_limit` are retried after 1 s, 2 s, 4 s, ... (at most 60 s); `rate_limited` after the `Retry-After` it names (else 1 s, at most 60 s). That happens up to `WithMaxRetries` times (default 2). A 401, 403, 404, 410, 422, 504, `quota_exceeded` or any other 429 is never retried.
 
 A retry is only safe if it cannot run the work twice, so every analysis the client might retry carries an `Idempotency-Key`: yours from `Options.IdempotencyKey`, or a UUID the client generates for that call and reuses for each of its retries. The API answers a repeated key with the first request's token and result, charged once and delivered to your webhook once. `WithMaxRetries(0)` turns retries off, and the generated key with them.
+
+## Command-line tool
+
+The same repository ships `urlpipe`, a command-line tool built on this package, for the terminal and for scripts.
+
+```sh
+brew install urlpipe/tap/urlpipe                     # macOS and Linux
+scoop bucket add urlpipe https://github.com/URLpipe/scoop-bucket
+scoop install urlpipe                                # Windows
+go install github.com/URLpipe/urlpipe-go/cmd/urlpipe@latest
+```
+
+Or download a binary for your system from [Releases](https://github.com/URLpipe/urlpipe-go/releases). Then save your key once:
+
+```sh
+urlpipe login        # or set URLPIPE_API_KEY, or pass --api-key
+```
+
+Results go to stdout and everything else to stderr, so they pipe cleanly:
+
+```sh
+urlpipe markdown example.com > page.md
+urlpipe html https://example.com | grep -c "<a "
+urlpipe screenshot https://example.com --width 390 --scale 2 -o mobile.png
+urlpipe screenshot example.com --dark --viewport-only        # writes example.com.png
+urlpipe meta example.com | jq .title
+urlpipe keywords example.com --json
+urlpipe summarize https://example.com/post
+urlpipe scrape example.com --ops markdown,meta,console
+urlpipe markdown example.com --async                          # prints a token
+urlpipe result TOKEN --op markdown --wait
+```
+
+Every analysis command takes `--max-age`, `--label key=value`, `--residential`, `--async`, `--block-ads`, `--block-cookie-banners`, `--wait-for CSS`, `--timeout` and `-v` (print the cache status, cost and credits left). `urlpipe help <command>` lists a command's own flags.
+
+### In CI
+
+Two commands can fail a build on what they find, with exit code 3:
+
+```sh
+urlpipe console "$PREVIEW_URL" --fail-on-errors            # any console error or uncaught exception
+urlpipe lighthouse "$PREVIEW_URL" --device mobile --min-score 90
+```
+
+| Exit code | Meaning |
+|---:|---|
+| 0 | Success |
+| 1 | The API or the network failed |
+| 2 | The command line is wrong, or there is no API key |
+| 3 | `--fail-on-errors` or `--min-score` found a problem |
+| 4 | `urlpipe result`: the analysis is still running (add `--wait`) |
 
 ## Links
 
