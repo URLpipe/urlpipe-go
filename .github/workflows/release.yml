@@ -1,0 +1,38 @@
+name: Release
+
+# Go modules have no registry to publish to: the pushed tag is the release,
+# and pkg.go.dev indexes it on its own. This workflow tests the tag and then
+# creates the GitHub Release for it.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GOTOOLCHAIN: local
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27"
+      - run: go vet ./...
+      - run: go test -race -count=1 ./...
+
+  release:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes --verify-tag
+      - name: Ask pkg.go.dev to index the tag
+        run: curl -fsS "https://proxy.golang.org/github.com/!u!r!lpipe/urlpipe-go/@v/${GITHUB_REF_NAME}.info" || true
